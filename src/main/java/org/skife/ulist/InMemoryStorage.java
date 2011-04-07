@@ -31,17 +31,11 @@ public class InMemoryStorage implements Storage
         }));
     }
 
-    public synchronized Alias createAlias(String creator, String name, Iterable<Mailbox> recipients)
+    public synchronized Alias createAlias(String creator, String name, Iterable<String> recipients)
     {
         UUID uuid = UUID.randomUUID();
         Set<String> members = Sets.newHashSet();
-        Iterables.addAll(members, Iterables.transform(recipients, new Function<Mailbox, String>()
-        {
-            public String apply(Mailbox mailbox)
-            {
-                return mailbox.getAddress();
-            }
-        }));
+        Iterables.addAll(members, recipients);
         members.add(creator);
         aliases.put(uuid, members);
 
@@ -61,15 +55,10 @@ public class InMemoryStorage implements Storage
         return findAlias(creator, name);
     }
 
-    public synchronized Alias addToAlias(String from, String aliasName, Iterable<Mailbox> newbs)
+    public synchronized Alias addToAlias(String from, String aliasName, Iterable<String> newbs)
     {
         UUID uuid = names.get(Maps.immutableEntry(from, aliasName));
-        Iterables.addAll(aliases.get(uuid), Iterables.transform(newbs, new Function<Mailbox, String>() {
-            public String apply(Mailbox mailbox)
-            {
-                return mailbox.getAddress();
-            }
-        }));
+        Iterables.addAll(aliases.get(uuid), newbs);
 
         return findAlias(from, aliasName);
     }

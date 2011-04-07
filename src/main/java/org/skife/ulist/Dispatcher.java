@@ -1,5 +1,6 @@
 package org.skife.ulist;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -62,13 +63,20 @@ public class Dispatcher
 
 
                 Set<Mailbox> newbs = Sets.difference(Sets.newHashSet(recipients), Sets.newHashSet(alias.getMembers()));
-                storage.addToAlias(from.getAddress(), alias_mbox.getLocalPart(), newbs);
+                storage.addToAlias(from.getAddress(), alias_mbox.getLocalPart(),
+                                   Iterables.transform(newbs, new Function<Mailbox, String>()
+                                   {
+                                       public String apply(Mailbox mailbox)
+                                       {
+                                           return mailbox.getAddress().toLowerCase();
+                                       }
+                                   }));
 
             }
             else {
                 // we need to make an alias!
 
-                Iterable<Mailbox> filtered_recipients = Iterables.filter(recipients, new Predicate<Mailbox>()
+                Iterable<Mailbox> filtered = Iterables.filter(recipients, new Predicate<Mailbox>()
                 {
                     public boolean apply(Mailbox mailbox)
                     {
@@ -79,7 +87,13 @@ public class Dispatcher
 
                 Alias new_alias = storage.createAlias(from.getAddress(),
                                                       alias_mbox.getLocalPart(),
-                                                      filtered_recipients);
+                                                      Iterables.transform(filtered, new Function<Mailbox, String> () {
+
+                                                          public String apply( Mailbox mailbox)
+                                                          {
+                                                              return mailbox.getAddress().toLowerCase();
+                                                          }
+                                                      }));
 
                 // TODO need to message the creator about creation of the alias
             }

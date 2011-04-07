@@ -83,8 +83,8 @@ public class TestListServ
     @Test
     public void testEmailsSentToExistingAlias() throws Exception
     {
-        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList(Mailbox.parse("kate@example.com"),
-                                                                                 Mailbox.parse("sam@example.com")));
+        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList("kate@example.com",
+                                                                                 "sam@example.com"));
 
         Email email = new SimpleEmail();
         email.setHostName(InetAddress.getLocalHost().getHostName());
@@ -104,8 +104,8 @@ public class TestListServ
     @Test
     public void testAddSomeoneToAlias() throws Exception
     {
-        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList(Mailbox.parse("kate@example.com"),
-                                                                                 Mailbox.parse("sam@example.com")));
+        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList("kate@example.com",
+                                                                                 "sam@example.com"));
 
         Email email = new SimpleEmail();
         email.setHostName(InetAddress.getLocalHost().getHostName());
