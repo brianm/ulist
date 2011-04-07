@@ -1,17 +1,30 @@
 package org.skife.ulist;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.james.mime4j.field.address.Mailbox;
 
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 public class Alias
 {
-    public Iterable<? extends Mailbox> getMembers()
-    {
-        return Lists.newArrayList(new Mailbox("brianm", "example.net"));
+    private final UUID name;
+    private final Iterable<Mailbox> members;
+
+    public Alias(UUID name, Iterable<Mailbox> members) {
+        this.name = name;
+        this.members = members;
     }
 
-    public String getAliasAddressFor(Mailbox member)
+    public Iterable<Mailbox> getMembers()
     {
-        return "everyone@ulist";
+        return members;
+    }
+
+    public UUID getName()
+    {
+        return name;
     }
 }

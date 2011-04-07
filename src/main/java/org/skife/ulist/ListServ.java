@@ -1,11 +1,8 @@
 package org.skife.ulist;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.mail.Email;
-import org.apache.commons.mail.SimpleEmail;
 import org.apache.james.mime4j.field.address.Mailbox;
 import org.apache.james.mime4j.message.Message;
-import org.apache.james.mime4j.parser.Field;
 import org.apache.log4j.BasicConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,12 +26,14 @@ public class ListServ
     private final SMTPServer server;
     private final Dispatcher dispatcher;
 
-    public ListServ(InetSocketAddress listenAddress, final InetSocketAddress outboundAddress)
+    public ListServ(InetSocketAddress listenAddress,
+                    Deliverator deliverator,
+                    Storage storage,
+                    String ulistDomain)
     {
         BasicConfigurator.configure();
 
-        final Storage storage = new Storage();
-        dispatcher = new Dispatcher(storage, outboundAddress);
+        dispatcher = new Dispatcher(deliverator, storage, ulistDomain);
 
 
         server = new SMTPServer(new MessageHandlerFactory()
@@ -72,7 +71,8 @@ public class ListServ
         server.setPort(listenAddress.getPort());
     }
 
-    public void start() {
+    public void start()
+    {
         server.start();
     }
 

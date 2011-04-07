@@ -1,9 +1,16 @@
 package org.skife.ulist;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.james.mime4j.field.address.Mailbox;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matcher;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.internal.matchers.IsCollectionContaining;
 import org.subethamail.wiser.Wiser;
 import org.subethamail.wiser.WiserMessage;
 
@@ -12,87 +19,114 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.internal.matchers.IsCollectionContaining.hasItem;
 
 public class TestListServ
 {
-    @Test
-    public void testFoo() throws Exception
+
+    private Wiser wiser;
+    private ListServ ls;
+    private InMemoryStorage storage;
+
+    @Before
+    public void setUp() throws Exception
     {
-        Wiser wiser = new Wiser(35353);
+        wiser = new Wiser(35353);
         wiser.start();
 
-        ListServ ls = new ListServ(new InetSocketAddress(InetAddress.getLocalHost(), 25252),
-                                   new InetSocketAddress(InetAddress.getLocalHost(), 35353));
+        storage = new InMemoryStorage();
+
+
+        ls = new ListServ(new InetSocketAddress(InetAddress.getLocalHost(), 25252),
+                          new Deliverator(new InetSocketAddress(InetAddress.getLocalHost(), 35353)),
+                          storage,
+                          "ulist");
 
         ls.start();
         while (!ls.isReady()) {
             Thread.sleep(100);
         }
+    }
 
-        Email email = new SimpleEmail();
-        email.setHostName(InetAddress.getLocalHost().getHostName());
-        email.setSmtpPort(25252);
-        email.setFrom("Brian Wiffle <brianm@example.com>");
-        email.addTo("everyone@ulist");
-        email.setSubject("a subject");
-        email.setMsg("hell world");
-        email.send();
-
-        List<WiserMessage> rs = wiser.getMessages();
-        assertThat(rs.size(), equalTo(1));
-
-        WiserMessage msg = rs.get(0);
-        assertThat(msg.getMimeMessage().getSubject(), equalTo("a subject"));
-        assertThat(msg.getEnvelopeSender(), equalTo("brianm@example.com"));
-        assertThat(msg.getMimeMessage().getHeader("reply-to").length, equalTo(1));
-        assertThat(Mailbox.parse(msg.getMimeMessage().getHeader("reply-to")[0]).getAddress(),
-                   equalTo("everyone@ulist"));
-
-
+    @After
+    public void tearDown() throws Exception
+    {
         ls.stop();
         wiser.stop();
     }
 
     @Test
-    public void testBar() throws Exception
+    public void testCreateMailingListForNewUser() throws Exception
     {
-        Wiser wiser = new Wiser(35353);
-        wiser.start();
+        Email email = new SimpleEmail();
+        email.setHostName(InetAddress.getLocalHost().getHostName());
+        email.setSmtpPort(25252);
+        email.setFrom("brianm@example.com");
+        email.setSubject("hi");
+        email.setMsg("hello world");
 
-        ListServ ls = new ListServ(new InetSocketAddress(InetAddress.getLocalHost(), 25252),
-                                   new InetSocketAddress(InetAddress.getLocalHost(), 35353));
+        email.addTo("kate@example.com");
+        email.addTo("new-list@ulist");
 
-        ls.start();
-        while (!ls.isReady()) {
-            Thread.sleep(100);
-        }
+        email.send();
+
+        Alias alias = storage.findAlias("brianm@example.com", "new-list");
+        assertThat(alias, notNullValue());
+        assertThat(alias.getMembers(), hasItem(Mailbox.parse("kate@example.com")));
+        assertThat(alias.getMembers(), hasItem(Mailbox.parse("brianm@example.com")));
+        assertThat(alias.getMembers(), not(hasItem(Mailbox.parse("new-list@ulist"))));
+    }
+
+    @Test
+    public void testEmailsSentToExistingAlias() throws Exception
+    {
+        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList(Mailbox.parse("kate@example.com"),
+                                                                                 Mailbox.parse("sam@example.com")));
 
         Email email = new SimpleEmail();
         email.setHostName(InetAddress.getLocalHost().getHostName());
         email.setSmtpPort(25252);
-        email.setFrom("Brian Wiffle <brianm@example.com>");
-        email.addTo("everyone@ulist");
-        email.addTo("brianm@wafflehut.com");
-        email.addTo("tim@wafflehut.com");
-        email.addTo("david@wafflehut.com");
-        email.setSubject("a subject");
-        email.setMsg("hell world");
+        email.setFrom("brianm@example.com");
+        email.setSubject("hi");
+        email.setMsg("hello world");
+
+        email.addTo("existing@ulist");
+
         email.send();
 
-        List<WiserMessage> rs = wiser.getMessages();
-        assertThat(rs.size(), equalTo(1));
-
-        WiserMessage msg = rs.get(0);
-        assertThat(msg.getMimeMessage().getSubject(), equalTo("a subject"));
-        assertThat(msg.getEnvelopeSender(), equalTo("brianm@example.com"));
-        assertThat(msg.getMimeMessage().getHeader("reply-to").length, equalTo(1));
-        assertThat(Mailbox.parse(msg.getMimeMessage().getHeader("reply-to")[0]).getAddress(),
-                   equalTo("everyone@ulist"));
-
-
-        ls.stop();
-        wiser.stop();
-
+        List<WiserMessage> msgs = wiser.getMessages();
+        assertThat(msgs.size(), equalTo(2));
     }
+
+    @Test
+    public void testAddSomeoneToAlias() throws Exception
+    {
+        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList(Mailbox.parse("kate@example.com"),
+                                                                                 Mailbox.parse("sam@example.com")));
+
+        Email email = new SimpleEmail();
+        email.setHostName(InetAddress.getLocalHost().getHostName());
+        email.setSmtpPort(25252);
+        email.setFrom("brianm@example.com");
+        email.setSubject("hi");
+        email.setMsg("hello world");
+
+        email.addTo("existing@ulist");
+        email.addTo("jon@example.com");
+
+        email.send();
+
+        List<WiserMessage> msgs = wiser.getMessages();
+        assertThat(msgs.size(), equalTo(2));
+
+        Alias alias = storage.findAlias("brianm@example.com", "existing");
+        assertThat(alias, notNullValue());
+        assertThat(alias.getMembers(), hasItem(Mailbox.parse("kate@example.com")));
+        assertThat(alias.getMembers(), hasItem(Mailbox.parse("brianm@example.com")));
+        assertThat(alias.getMembers(), hasItem(Mailbox.parse("jon@example.com")));
+    }
+
 }
