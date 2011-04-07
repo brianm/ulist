@@ -9,4 +9,9 @@ public class Alias
     {
         return Lists.newArrayList(new Mailbox("brianm", "example.net"));
     }
+
+    public String getAliasAddressFor(Mailbox member)
+    {
+        return "everyone@ulist";
+    }
 }

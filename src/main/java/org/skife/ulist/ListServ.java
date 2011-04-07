@@ -1,5 +1,6 @@
 package org.skife.ulist;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.james.mime4j.field.address.Mailbox;
@@ -18,6 +19,7 @@ import org.subethamail.smtp.server.SMTPServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 public class ListServ
 {
@@ -25,12 +27,15 @@ public class ListServ
     private static final Logger log = LoggerFactory.getLogger(ListServ.class);
 
     private final SMTPServer server;
+    private final Dispatcher dispatcher;
 
     public ListServ(InetSocketAddress listenAddress, final InetSocketAddress outboundAddress)
     {
         BasicConfigurator.configure();
 
         final Storage storage = new Storage();
+        dispatcher = new Dispatcher(storage, outboundAddress);
+
 
         server = new SMTPServer(new MessageHandlerFactory()
         {
@@ -38,7 +43,7 @@ public class ListServ
             {
                 return new MessageHandler()
                 {
-                    private Mailbox to;
+                    private List<Mailbox> to = Lists.newArrayList();
                     private Mailbox from;
 
                     public void from(String s) throws RejectException
@@ -48,39 +53,17 @@ public class ListServ
 
                     public void recipient(String s) throws RejectException
                     {
-                        to = Mailbox.parse(s);
+                        to.add(Mailbox.parse(s));
                     }
 
                     public void data(InputStream inputStream) throws RejectException, TooMuchDataException, IOException
                     {
                         Message msg = new Message(inputStream);
-                        for (Field field : msg.getHeader().getFields()) {
-                            log.debug("{} : {}", field.getName(), field.getBody());
-                        }
-
-                        Alias alias = storage.find(from, to);
-
-                        for (Mailbox member : alias.getMembers()) {
-                            try {
-                                Email email = new SimpleEmail();
-                                email.setHostName(outboundAddress.getAddress().getHostName());
-                                email.setSmtpPort(outboundAddress.getPort());
-                                email.setFrom(from.toString());
-                                email.addTo(member.getAddress());
-                                email.setSubject(msg.getSubject());
-                                email.setMsg(msg.getBody().toString());
-                                email.addReplyTo(to.getAddress());
-                                email.send();
-                            }
-                            catch (Exception e) {
-                                throw new RejectException(e.getMessage());
-                            }
-                        }
+                        dispatcher.dispatch(from, to, msg);
                     }
 
                     public void done()
                     {
-                        System.out.println("done!");
                     }
                 };
             }
