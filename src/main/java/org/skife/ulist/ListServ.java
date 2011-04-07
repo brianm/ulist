@@ -20,21 +20,17 @@ import java.util.List;
 
 public class ListServ
 {
-
-    private static final Logger log = LoggerFactory.getLogger(ListServ.class);
-
     private final SMTPServer server;
     private final Dispatcher dispatcher;
 
     public ListServ(InetSocketAddress listenAddress,
                     Deliverator deliverator,
                     Storage storage,
-                    String ulistDomain)
+                    String aliasDomain)
     {
         BasicConfigurator.configure();
 
-        dispatcher = new Dispatcher(deliverator, storage, ulistDomain);
-
+        dispatcher = new Dispatcher(deliverator, storage, aliasDomain);
 
         server = new SMTPServer(new MessageHandlerFactory()
         {

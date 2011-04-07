@@ -2,15 +2,12 @@ package org.skife.ulist;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.mail.Email;
+import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.james.mime4j.field.address.Mailbox;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.internal.matchers.IsCollectionContaining;
 import org.subethamail.wiser.Wiser;
 import org.subethamail.wiser.WiserMessage;
 
@@ -18,15 +15,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.internal.matchers.IsCollectionContaining.hasItem;
 
 public class TestListServ
 {
-
     private Wiser wiser;
     private ListServ ls;
     private InMemoryStorage storage;
@@ -39,9 +33,8 @@ public class TestListServ
 
         storage = new InMemoryStorage();
 
-
         ls = new ListServ(new InetSocketAddress(InetAddress.getLocalHost(), 25252),
-                          new Deliverator(new InetSocketAddress(InetAddress.getLocalHost(), 35353)),
+                          new SMTPDeliverator(new InetSocketAddress(InetAddress.getLocalHost(), 35353)),
                           storage,
                           "ulist");
 
@@ -127,5 +120,27 @@ public class TestListServ
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("kate@example.com")));
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("brianm@example.com")));
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("jon@example.com")));
+    }
+
+    @Test
+    public void testSendingFancyEmail() throws Exception
+    {
+        storage.createAlias("brianm@example.com", "existing", Lists.newArrayList("kate@example.com"));
+
+        HtmlEmail email = new HtmlEmail();
+        email.setHostName(InetAddress.getLocalHost().getHostName());
+        email.setSmtpPort(25252);
+        email.setFrom("brianm@example.com");
+        email.setSubject("hi");
+        email.addPart("hello world", "text/plain");
+        email.addPart("<h1>hello world</h1>", "text/html");
+
+        email.addTo("existing@ulist");
+        email.send();
+
+        List<WiserMessage> msgs = wiser.getMessages();
+        assertThat(msgs.size(), equalTo(1));
+        WiserMessage msg = msgs.get(0);
+        System.out.println(new String(msg.getData()));
     }
 }
