@@ -128,5 +128,4 @@ public class TestListServ
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("brianm@example.com")));
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("jon@example.com")));
     }
-
 }
