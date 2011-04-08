@@ -4,14 +4,16 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.sun.mail.smtp.SMTPMessage;
 import org.apache.commons.mail.EmailException;
 import org.apache.james.mime4j.field.address.Mailbox;
-import org.apache.james.mime4j.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.subethamail.smtp.RejectException;
 import org.subethamail.smtp.TooMuchDataException;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
 import java.io.IOException;
 import java.util.Set;
 
@@ -32,10 +34,11 @@ public class Dispatcher
         this.aliasDomain = aliasDomain;
     }
 
-    public void dispatch(Mailbox from, Iterable<Mailbox> recipients, Message msg) throws RejectException,
-                                                                                         TooMuchDataException,
-                                                                                         IOException
+    public void dispatch(Mailbox from, Iterable<Mailbox> recipients, SMTPMessage msg) throws RejectException,
+                                                                                             TooMuchDataException,
+                                                                                             IOException
     {
+
         final Mailbox alias_mbox = Iterables.find(recipients, new Predicate<Mailbox>()
         {
             public boolean apply(Mailbox mailbox)
@@ -53,10 +56,10 @@ public class Dispatcher
                 for (Mailbox alias_member : alias.getMembers()) {
                     try {
                         if (!alias_member.equals(from)) {
-                            deliverator.deliver(from, alias_member, msg);
+                            deliverator.deliver(from.getAddress(), alias_member.getAddress(), msg);
                         }
                     }
-                    catch (EmailException e) {
+                    catch (Exception e) {
                         log.warn("unable to deliver mail", e);
                     }
                 }
@@ -87,9 +90,10 @@ public class Dispatcher
 
                 Alias new_alias = storage.createAlias(from.getAddress(),
                                                       alias_mbox.getLocalPart(),
-                                                      Iterables.transform(filtered, new Function<Mailbox, String> () {
+                                                      Iterables.transform(filtered, new Function<Mailbox, String>()
+                                                      {
 
-                                                          public String apply( Mailbox mailbox)
+                                                          public String apply(Mailbox mailbox)
                                                           {
                                                               return mailbox.getAddress().toLowerCase();
                                                           }

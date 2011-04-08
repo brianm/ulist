@@ -5,9 +5,11 @@ import org.apache.commons.mail.Email;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.james.mime4j.field.address.Mailbox;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.matchers.StringContains;
 import org.subethamail.wiser.Wiser;
 import org.subethamail.wiser.WiserMessage;
 
@@ -18,6 +20,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.internal.matchers.IsCollectionContaining.hasItem;
+import static org.junit.internal.matchers.StringContains.containsString;
 
 public class TestListServ
 {
@@ -120,6 +123,9 @@ public class TestListServ
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("kate@example.com")));
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("brianm@example.com")));
         assertThat(alias.getMembers(), hasItem(Mailbox.parse("jon@example.com")));
+
+        assertThat(new String(msgs.get(0).getData()), containsString("hello world"));
+
     }
 
     @Test
@@ -134,6 +140,7 @@ public class TestListServ
         email.setSubject("hi");
         email.addPart("hello world", "text/plain");
         email.addPart("<h1>hello world</h1>", "text/html");
+        email.addPart("RIBBIT :-)", "frog/altruistic");
 
         email.addTo("existing@ulist");
         email.send();
@@ -141,6 +148,9 @@ public class TestListServ
         List<WiserMessage> msgs = wiser.getMessages();
         assertThat(msgs.size(), equalTo(1));
         WiserMessage msg = msgs.get(0);
-        System.out.println(new String(msg.getData()));
+        assertThat(new String(msg.getData()), containsString("Content-Type: text/html"));
+        assertThat(new String(msg.getData()), containsString("Content-Type: text/plain"));
+        assertThat(new String(msg.getData()), containsString("Content-Type: frog/altruistic"));
+
     }
 }

@@ -1,14 +1,13 @@
 package org.skife.ulist;
 
+import com.sun.mail.smtp.SMTPMessage;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
-import org.apache.james.mime4j.field.address.Mailbox;
-import org.apache.james.mime4j.message.Body;
-import org.apache.james.mime4j.message.Message;
-import org.apache.james.mime4j.message.Multipart;
-import org.apache.james.mime4j.message.SingleBody;
 
+import javax.mail.MessagingException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class SMTPDeliverator implements Deliverator
@@ -21,28 +20,23 @@ public class SMTPDeliverator implements Deliverator
         this.outboundAddress = outboundAddress;
     }
 
-    public void deliver(Mailbox from, Mailbox recipient, Message msg) throws EmailException
+    public void deliver(String from, String recipient, SMTPMessage msg) throws EmailException, MessagingException, IOException
     {
         Email email = new SimpleEmail();
+
         email.setHostName(outboundAddress.getAddress().getHostName());
         email.setSmtpPort(outboundAddress.getPort());
 
-        email.setFrom(from.getAddress());
+        email.setFrom(from);
         email.setSubject(msg.getSubject());
 
+        email.setContent(msg.getContent(), msg.getContentType());
 
-        Body body = msg.getBody();
-        if (body instanceof Message) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        msg.writeTo(out);
 
-        }
-        else if (body instanceof Multipart)
-        {
-
-        }
-        else if (body instanceof SingleBody)
-
-        email.setMsg(msg.getBody().toString());
-        email.addTo(recipient.getAddress());
+        email.setMsg(new String(out.toByteArray()));
+        email.addTo(recipient);
         email.send();
 
     }

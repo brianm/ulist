@@ -1,6 +1,7 @@
 package org.skife.ulist;
 
 import com.google.common.collect.Lists;
+import com.sun.mail.smtp.SMTPMessage;
 import org.apache.james.mime4j.field.address.Mailbox;
 import org.apache.james.mime4j.message.Message;
 import org.apache.log4j.BasicConfigurator;
@@ -13,10 +14,13 @@ import org.subethamail.smtp.RejectException;
 import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.server.SMTPServer;
 
+import javax.mail.MessagingException;
+import javax.mail.Session;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Properties;
 
 public class ListServ
 {
@@ -53,8 +57,16 @@ public class ListServ
 
                     public void data(InputStream inputStream) throws RejectException, TooMuchDataException, IOException
                     {
-                        Message msg = new Message(inputStream);
-                        dispatcher.dispatch(from, to, msg);
+                        Session session = Session.getDefaultInstance(new Properties());
+                        SMTPMessage msg = null;
+                        try {
+                            msg = new SMTPMessage(session, inputStream);
+
+                            dispatcher.dispatch(from, to, msg);
+                        }
+                        catch (MessagingException e) {
+
+                        }
                     }
 
                     public void done()
